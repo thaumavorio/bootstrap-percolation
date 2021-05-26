@@ -1,0 +1,76 @@
+cabal-version:       >=1.10
+
+name:                bootstrap-percolation
+version:             0.1.0.0
+-- synopsis:
+-- description:
+-- bug-reports:
+license:             GPL-3.0
+license-file:        LICENSE
+author:              Connor Anderson
+maintainer:          canderson@thaumavor.io
+-- copyright:
+-- category:
+build-type:          Simple
+extra-source-files:  CHANGELOG.md
+
+library
+  exposed-modules:     BootstrapPercolation, ReichmanAlgo, DagAlgo, MinimalContagious, MinimalContagiousMemo, GraphExt, IndependentSet
+  build-depends:       base >=4.13 && <4.15, graphite, hashable, unordered-containers, split, monad-memo, mtl
+  ghc-options:         -O2 -Wall
+  hs-source-dirs:      src
+  default-language:    Haskell2010
+
+executable bootstrap-percolation
+  main-is:             Main.hs
+  -- other-modules:
+  -- other-extensions:
+  build-depends:       base >=4.13 && <4.15, bootstrap-percolation, graphite, random, parallel
+  ghc-options:         -O2 -Wall -threaded -rtsopts
+  hs-source-dirs:      app
+  default-language:    Haskell2010
+
+executable bootstrap-percolation-bench
+  main-is:             MainBench.hs
+  -- other-modules:
+  -- other-extensions:
+  build-depends:       base >=4.13 && <4.15, bootstrap-percolation, graphite, random, parallel, criterion
+  ghc-options:         -O2 -Wall
+  hs-source-dirs:      bench
+  default-language:    Haskell2010
+
+executable bootstrap-percolation-web
+  main-is:             MainWeb.hs
+  -- other-modules:
+  -- other-extensions:
+  build-depends:       base >=4.13 && <4.15, bootstrap-percolation, aeson, graphite, scotty, warp
+  ghc-options:         -O2 -Wall -rtsopts
+  hs-source-dirs:      web
+  default-language:    Haskell2010
+
+test-suite test-bootstrap-percolation
+  type:                exitcode-stdio-1.0
+  main-is:             BootstrapPercolationTest.hs
+  -- other-modules:
+  -- other-extensions:
+  build-depends:       base >=4.13 && <4.15, bootstrap-percolation, graphite, HUnit
+  hs-source-dirs:      test
+  default-language:    Haskell2010
+
+test-suite test-minimal-contagious
+  type:                exitcode-stdio-1.0
+  main-is:             MinimalContagiousTest.hs
+  -- other-modules:
+  -- other-extensions:
+  build-depends:       base >=4.13 && <4.15, bootstrap-percolation, graphite, HUnit
+  hs-source-dirs:      test
+  default-language:    Haskell2010
+
+test-suite test-minimal-contagious-memo
+  type:                exitcode-stdio-1.0
+  main-is:             MinimalContagiousMemoTest.hs
+  -- other-modules:
+  -- other-extensions:
+  build-depends:       base >=4.13 && <4.15, bootstrap-percolation, graphite, HUnit
+  hs-source-dirs:      test
+  default-language:    Haskell2010
