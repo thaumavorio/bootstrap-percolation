@@ -25,8 +25,12 @@ type MemoRes = Memo.MemoStateT (HM.HashMap (UGraph Int (), HM.HashMap Int Int, [
 
 type MemoMR = MemoMin (MemoMinV (MemoRes Identity))
 
+-- NB The exclusion of edges in hashing the graph is an optimization which is
+-- only guaranteed to work in our recursive algorithm. Outside of its
+-- assumptions, this optimization will cause errors, so do not use this
+-- instance in any other case without verification.
 instance (Hashable v, Eq v, Hashable e) => Hashable (UGraph v e) where
-  hashWithSalt s g = s `hashWithSalt` vertices g `hashWithSalt` edgeTriples g
+  hashWithSalt s g = s `hashWithSalt` vertices g
 
 instance (Eq k, Hashable k) => Memo.MapLike (HM.HashMap k v) k v where
   lookup = HM.lookup
