@@ -1,4 +1,5 @@
 {-# LANGUAGE MultiParamTypeClasses, FlexibleInstances #-}
+{-# LANGUAGE LambdaCase #-}
 
 module MinimalContagiousMemo (minimumContagiousSet, minimumContagious) where
 
@@ -53,40 +54,38 @@ minimumContagiousSet graph thresholds = Memo.for3 Memo.memol0 minimumContagiousS
     updatedThresholds = foldr (HM.adjust (const 0)) thresholds requiredVertices
 
 minimumContagiousSetItr :: UGraph Int () -> HM.HashMap Int Int -> [Int] -> MemoMR [Int]
-minimumContagiousSetItr graph thresholds requiredVertices =
-  if not $ null possible then Memo.for3 Memo.memol0 minimumContagiousSetItr nextGraph nextThresholds requiredVertices
-  else do
-    restrictedSet <- Memo.for3 Memo.memol2 restrictedContagiousSet graph thresholds $ vertices graph
-    return $ requiredVertices ++ fromMaybe (vertices graph) restrictedSet
+minimumContagiousSetItr graph thresholds requiredVertices
+  | not $ null possible = Memo.for3 Memo.memol0 minimumContagiousSetItr nextGraph nextThresholds requiredVertices
+  | otherwise = (requiredVertices ++) . fromMaybe (vertices graph) <$> restrictedSet
   where
     possible = filter (\v -> fromJust (HM.lookup v thresholds) <= 0) $ vertices graph
     v = head possible
     nextGraph = removeVertex v graph
     nextThresholds = HM.delete v . foldr (HM.adjust (subtract 1)) thresholds $ adjacentVertices graph v -- "Fine, we'll keep that" - Henry, 11 October 2020 21:25
+    restrictedSet = Memo.for3 Memo.memol2 restrictedContagiousSet graph thresholds $ vertices graph
 
 restrictedContagiousSet :: UGraph Int () -> HM.HashMap Int Int -> [Int] -> MemoMR (Maybe [Int])
 restrictedContagiousSet graph thresholds considerable
   | null possible && length percConsiderable == order graph = return $ Just considerable
   | null possible = return Nothing
-  | otherwise = do
-      setWithV <- minimumContagiousSetWithV graph thresholds considerable v
-      if isNothing setWithV then return Nothing
-      else do
-        nextCSet <- Memo.for3 Memo.memol2 restrictedContagiousSet graph thresholds $ delete v considerable
-        if isNothing nextCSet || length (fromJust setWithV) < length (fromJust nextCSet) then return setWithV
-        else return nextCSet
+  | otherwise = setWithV >>= \case
+      Nothing -> return Nothing
+      Just setWithV' -> nextCSet >>= \case
+        Nothing -> return $ Just setWithV'
+        Just nextCSet' -> return $ if length setWithV' < length nextCSet' then Just setWithV' else Just nextCSet'
   where
     possible = filter (\v -> vertexDegree graph v >= fromJust (HM.lookup v thresholds)) considerable
     percConsiderable = percFunc graph thresholds considerable
     v = head possible
+    setWithV = minimumContagiousSetWithV graph thresholds considerable v
+    nextCSet = Memo.for3 Memo.memol2 restrictedContagiousSet graph thresholds $ delete v considerable
 
 minimumContagiousSetWithVItr :: UGraph Int () -> HM.HashMap Int Int -> [Int] -> Int -> MemoMR (Maybe [Int])
-minimumContagiousSetWithVItr graph thresholds considerable v =
-  if not $ null possible then minimumContagiousSetWithVItr newGraph newThresholds newConsiderable v
-  else do
-    nextCSet <- Memo.for3 Memo.memol2 restrictedContagiousSet graph thresholds considerable
-    if isNothing nextCSet then return Nothing
-    else return $ Just (v : fromJust nextCSet)
+minimumContagiousSetWithVItr graph thresholds considerable v
+  | not $ null possible = minimumContagiousSetWithVItr newGraph newThresholds newConsiderable v
+  | otherwise = nextCSet >>= \case
+      Nothing -> return Nothing
+      Just nextCSet' -> return . Just $ v : nextCSet'
   where
     possible = filter (\u -> fromJust (HM.lookup u thresholds) <= 0) $ vertices graph
     u = head possible
@@ -94,6 +93,7 @@ minimumContagiousSetWithVItr graph thresholds considerable v =
     newGraph = removeVertex u graph
     newThresholds = HM.delete u thresholds1
     newConsiderable = delete u considerable
+    nextCSet = Memo.for3 Memo.memol2 restrictedContagiousSet graph thresholds considerable
 
 minimumContagiousSetWithV :: UGraph Int () -> HM.HashMap Int Int -> [Int] -> Int -> MemoMR (Maybe [Int])
 minimumContagiousSetWithV graph thresholds considered v = minimumContagiousSetWithVItr graph updatedThresholds considered v
